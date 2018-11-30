@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>REC</title>
+</head>
+<body>
+
+
+
+<script>
+
+    navigator.mediaDevices.enumerateDevices().then(devicelist => {
+        // audiooutput 扬声器
+        // audioinput  麦克风
+        // audiooutput 摄像
+        console.log(devicelist)
+    }).catch(err => console.log(err));
+
+
+    //
+    // navigator.getDisplayMedia({ video: true })
+    //     .then(stream => {
+    //         videoElement.srcObject = stream;
+    //         console.log(stream)
+    //     }, error => console.log(error));
+    //
+    // let supportedConstraints = navigator.mediaDevices.getSupportedConstraints();
+    // console.log(supportedConstraints)
+</script>
+</body>
+</html>

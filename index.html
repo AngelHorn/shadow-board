@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<meta charset="UTF-8">
+<body>
+
+
+<video autoplay id="video" style="width:400px;height:auto" controls="controls"></video>
+<video autoplay id="video2" style="width:400px;height:auto" controls="controls">
+
+</video>
+<canvas id="output" style="width:400px;height:auto"></canvas>
+</body>
+
+
+<script type="text/javascript" charset="utf-8">
+    function store() {
+
+        var socket = new WebSocket("ws://0x00000000.me:9502");
+        var video = document.getElementById("video");
+        var back = document.getElementById('output');
+        var backcontext = back.getContext('2d');
+
+
+        socket.onopen = function () {
+            draw();
+            console.log("open success")
+        };
+        var draw = function () {
+            try {
+                backcontext.drawImage(video, 0, 0, back.width, back.height);
+            } catch (e) {
+                if (e.name == "NS_ERROR_NOT_AVAILABLE") {
+                    return setTimeout(draw, 40);
+                } else {
+                    throw e;
+                }
+            }
+            if (video.src) {
+                // Canvas的内容转化成PNG data URI并发送到服务器，0.5为和压缩系数
+                socket.send(back.toDataURL("image/jpeg", 0.5));
+            }
+            setTimeout(draw, 17);
+        };
+
+
+        sec();
+
+        function sec() {
+            // 老的浏览器可能根本没有实现 mediaDevices，所以我们可以先设置一个空的对象
+            if (navigator.mediaDevices === undefined) {
+                navigator.mediaDevices = {};
+            }
+
+            // 一些浏览器部分支持 mediaDevices。我们不能直接给对象设置 getUserMedia
+            // 因为这样可能会覆盖已有的属性。这里我们只会在没有getUserMedia属性的时候添加它。
+            if (navigator.mediaDevices.getUserMedia === undefined) {
+                navigator.mediaDevices.getUserMedia = function (constraints) {
+
+                    // 首先，如果有getUserMedia的话，就获得它
+                    var getUserMedia = navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+
+                    // 一些浏览器根本没实现它 - 那么就返回一个error到promise的reject来保持一个统一的接口
+                    if (!getUserMedia) {
+                        return Promise.reject(new Error('getUserMedia is not implemented in this browser'));
+                    }
+
+                    // 否则，为老的navigator.getUserMedia方法包裹一个Promise
+                    return new Promise(function (resolve, reject) {
+                        getUserMedia.call(navigator, constraints, resolve, reject);
+                    });
+                }
+            }
+
+            navigator.mediaDevices.getUserMedia({audio: true, video: true})
+                .then(function (stream) {
+                    var video = document.getElementById("video");
+                    // 旧的浏览器可能没有srcObject
+                    if ("srcObject" in video) {
+                        video.srcObject = stream;
+                    } else {
+                        // 防止再新的浏览器里使用它，应为它已经不再支持了
+                        video.src = window.URL.createObjectURL(stream);
+                    }
+                    video.onloadedmetadata = function (e) {
+                        video.play();
+                    };
+                })
+                .catch(function (err) {
+                    console.log(err.name + ": " + err.message);
+                });
+        }
+
+
+    }
+</script>
+<script>
+
+    //创建一个socket实例
+    var receiver_socket = new WebSocket("ws://192.168.0.117:9502");
+    receiver_socket.binaryType = "arraybuffer";
+
+    var video2 = document.getElementById('video2');
+    var mimeCodec = 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"';
+    // var mimeCodec = 'video/mp4; codecs="mp4a.6b, avc1.640028"';
+    // var mimeCodec = 'video/webm; codecs="vp8, vorbis"';
+    // var mimeCodec = 'video/webm; codecs="vp9"';
+    // 监听消息
+    var receiver_stream;
+
+    // testOldBlob();
+    testMediaSource();
+
+    function testMediaSource() {
+        receiver_stream = new MediaSource();
+        video2.src = URL.createObjectURL(receiver_stream);
+        console.log("testMediaSource");
+        receiver_stream.addEventListener('sourceopen', function () {
+            var mediaSource = this;
+            var sourceBuffer = mediaSource.addSourceBuffer(mimeCodec);
+            sourceBuffer.addEventListener('updateend', function (_) {
+                console.log("updateend " + !sourceBuffer.updating, mediaSource.readyState === 'open');
+                if (!sourceBuffer.updating && mediaSource.readyState === 'open') {
+                    // mediaSource.endOfStream();
+                }
+                // mediaSource.endOfStream();
+                // sourceBuffer.appendBuffer(data.data);
+            });
+            receiver_socket.onmessage = function (data) {
+                console.log("onmessage " + !sourceBuffer.updating, mediaSource.readyState === 'open');
+                sourceBuffer.appendBuffer(data.data);
+            };
+
+            receiver_socket.onclose = function (data) {
+                console.log(" receiver_socket.onclose");
+            };
+        });
+    }
+
+    function testOldBlob() {
+        receiver_socket.onmessage = function (data) {
+
+            if (!receiver_stream) {
+                receiver_stream = new Blob([]);
+            }
+            receiver_stream = new Blob([receiver_stream, data.data]);
+            //客户端应该受到第一个包的时候发消息给服务器 我要第二个包！！
+            //客户端应该受到第一个包的时候发消息给服务器 我要第二个包！！
+            //客户端应该受到第一个包的时候发消息给服务器 我要第二个包！！
+            //客户端应该受到第一个包的时候发消息给服务器 我要第二个包！！
+            //客户端应该受到第一个包的时候发消息给服务器 我要第二个包！！
+            //客户端应该受到第一个包的时候发消息给服务器 我要第二个包！！
+            video2.src = URL.createObjectURL(receiver_stream);
+        };
+
+    }
+
+
+</script>
+</html>
