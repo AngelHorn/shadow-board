@@ -15,8 +15,14 @@ $ws->on('open', function ($ws, $request) {
 $ws->on('message', function ($ws, $frame) {
 //    echo "Message: {$frame->data}\n";
     echo strlen($frame->data) . "\n";
-    var_dump($frame);
-    $ws->push($frame->fd + 1, $frame->data);
+//    var_dump($frame);
+//    var_dump($ws);
+    foreach($ws->connections as $fd)
+    {
+        $ws->push($fd, $frame->data);
+    }
+//    $ws->push($frame->fd + 1, $frame->data);
+//    $ws->push($frame->data);
 });
 
 //监听WebSocket连接关闭事件
