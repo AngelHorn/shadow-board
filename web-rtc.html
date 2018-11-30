@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<meta charset="UTF-8">
+<head>
+</head>
+<body>
+<audio width="400" height="300" controls>
+
+</audio>
+
+<script>
+    var media_info;
+    navigator.mediaDevices.enumerateDevices()
+        .then(function (MediaDeviceInfo) {
+            media_info = MediaDeviceInfo;
+            console.log(MediaDeviceInfo)
+        })
+
+    navigator.mediaDevices.getUserMedia({audio: true, video: false})
+        .then(function (mediaStream) {
+            var video = document.querySelector('audio');
+            console.log(mediaStream);
+            video.srcObject = mediaStream;
+            video.onloadedmetadata = function (e) {
+                video.play();
+            };
+        })
+
+</script>
+</body>
+</html>
