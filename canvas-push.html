@@ -17,7 +17,7 @@
         socket.send(img_data);//这里用截图的模式接收端的会有很严重的毛边，看来还是要转换成矢量格式 比如说SVG之类的比较好
     }
 
-    function drawPerFrameByPointCurve(beginPoint, controlPoint, endPoint) {
+    function sendPerFrameByPointCurve(beginPoint, controlPoint, endPoint) {
         socket.send(JSON.stringify({beginPoint, controlPoint, endPoint}));
     }
 
@@ -94,7 +94,7 @@
         ctx.closePath();
         console.log(counter++);
         // sendPerFrameByFullScreenImg(canvas.toDataURL());
-        drawPerFrameByPointCurve(beginPoint, controlPoint, endPoint);
+        sendPerFrameByPointCurve(beginPoint, controlPoint, endPoint);
     }
 </script>
 </body>

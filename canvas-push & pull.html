@@ -9,35 +9,33 @@
 </canvas>
 
 <script>
+    var counter = 0;
     var socket = new WebSocket("ws://192.168.0.117:9502");
     socket.onmessage = function (event) {
         // drawPerFrameByFullScreenImg(event.data);
         drawPerFrameByPointCurve(event.data);
     }
 
-    function drawPerFrameByFullScreenImg(img_data){
-        var frame = new Image();
-        // console.log(event)
-        frame.src = img_data;
-        frame.onload = function(){
-            ctx.drawImage(frame,0,0);
-        }
+    function sendPerFrameByFullScreenImg(img_data) {
+        socket.send(img_data);//这里用截图的模式接收端的会有很严重的毛边，看来还是要转换成矢量格式 比如说SVG之类的比较好
     }
 
-    function drawPerFrameByPointCurve(img_data){
+    function sendPerFrameByPointCurve(beginPoint, controlPoint, endPoint) {
+        socket.send(JSON.stringify({beginPoint, controlPoint, endPoint}));
+    }
+
+    function drawPerFrameByPointCurve(img_data) {
         var img_data = JSON.parse(img_data);
-        console.log(img_data);
-        drawLine(img_data.beginPoint, img_data.controlPoint, img_data.endPoint);
+        // console.log(img_data);
+        drawLine(img_data.beginPoint, img_data.controlPoint, img_data.endPoint, false);
     }
 
-    // --------------------------------------------------------
-
+    // --------------------------
     let isDown = false;
     let points = [];
     let beginPoint = null;
     const canvas = document.querySelector('#canvas');
     const ctx = canvas.getContext('2d');
-
     // 设置线条颜色
     ctx.strokeStyle = 'red';
     ctx.lineWidth = 10;
@@ -51,7 +49,7 @@
 
     function down(evt) {
         isDown = true;
-        const { x, y } = getPos(evt);
+        const {x, y} = getPos(evt);
         points.push({x, y});
         beginPoint = {x, y};
     }
@@ -59,7 +57,7 @@
     function move(evt) {
         if (!isDown) return;
 
-        const { x, y } = getPos(evt);
+        const {x, y} = getPos(evt);
         points.push({x, y});
 
         if (points.length > 0) {// old value is 3
@@ -76,7 +74,7 @@
 
     function up(evt) {
         if (!isDown) return;
-        const { x, y } = getPos(evt);
+        const {x, y} = getPos(evt);
         points.push({x, y});
 
         if (points.length > 0) { // old value is 3
@@ -97,13 +95,17 @@
         }
     }
 
-    function drawLine(beginPoint, controlPoint, endPoint) {
+    function drawLine(beginPoint, controlPoint, endPoint, isNeedSend = true) {
         ctx.beginPath();
         ctx.moveTo(beginPoint.x, beginPoint.y);
         ctx.quadraticCurveTo(controlPoint.x, controlPoint.y, endPoint.x, endPoint.y);
         ctx.stroke();
         ctx.closePath();
-        // console.log("call function_drawline");
+        console.log(counter++);
+        // sendPerFrameByFullScreenImg(canvas.toDataURL());
+        if (isNeedSend === true) {
+            sendPerFrameByPointCurve(beginPoint, controlPoint, endPoint);
+        }
     }
 </script>
 </body>
