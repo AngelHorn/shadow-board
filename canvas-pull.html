@@ -11,12 +11,23 @@
 <script>
     var socket = new WebSocket("ws://192.168.0.117:9502");
     socket.onmessage = function (event) {
+        // drawPerFrameByFullScreenImg(event.data);
+        drawPerFrameByPointCurve(event.data);
+    }
+
+    function drawPerFrameByFullScreenImg(img_data){
         var frame = new Image();
-        console.log(event)
-        frame.src = event.data;
+        // console.log(event)
+        frame.src = img_data;
         frame.onload = function(){
             ctx.drawImage(frame,0,0);
         }
+    }
+
+    function drawPerFrameByPointCurve(img_data){
+        var img_data = JSON.parse(img_data);
+        console.log(img_data);
+        drawLine(img_data.beginPoint, img_data.controlPoint, img_data.endPoint);
     }
 
     // --------------------------------------------------------
@@ -92,6 +103,7 @@
         ctx.quadraticCurveTo(controlPoint.x, controlPoint.y, endPoint.x, endPoint.y);
         ctx.stroke();
         ctx.closePath();
+        console.log("call function_drawline");
     }
 </script>
 </body>

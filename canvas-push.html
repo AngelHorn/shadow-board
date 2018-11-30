@@ -13,9 +13,15 @@
     var socket = new WebSocket("ws://192.168.0.117:9502");
 
 
+    function sendPerFrameByFullScreenImg(img_data) {
+        socket.send(img_data);//这里用截图的模式接收端的会有很严重的毛边，看来还是要转换成矢量格式 比如说SVG之类的比较好
+    }
 
+    function drawPerFrameByPointCurve(beginPoint, controlPoint, endPoint) {
+        socket.send(JSON.stringify({beginPoint, controlPoint, endPoint}));
+    }
 
-// --------------------------
+    // --------------------------
     let isDown = false;
     let points = [];
     let beginPoint = null;
@@ -34,7 +40,7 @@
 
     function down(evt) {
         isDown = true;
-        const { x, y } = getPos(evt);
+        const {x, y} = getPos(evt);
         points.push({x, y});
         beginPoint = {x, y};
     }
@@ -42,7 +48,7 @@
     function move(evt) {
         if (!isDown) return;
 
-        const { x, y } = getPos(evt);
+        const {x, y} = getPos(evt);
         points.push({x, y});
 
         if (points.length > 0) {// old value is 3
@@ -59,7 +65,7 @@
 
     function up(evt) {
         if (!isDown) return;
-        const { x, y } = getPos(evt);
+        const {x, y} = getPos(evt);
         points.push({x, y});
 
         if (points.length > 0) { // old value is 3
@@ -87,7 +93,8 @@
         ctx.stroke();
         ctx.closePath();
         console.log(counter++);
-        socket.send(canvas.toDataURL());//这里用截图的模式接收端的会有很严重的毛边，看来还是要转换成矢量格式 比如说SVG之类的比较好
+        // sendPerFrameByFullScreenImg(canvas.toDataURL());
+        drawPerFrameByPointCurve(beginPoint, controlPoint, endPoint);
     }
 </script>
 </body>
