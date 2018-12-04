@@ -18,7 +18,8 @@
     }
 
     function sendPerFrameByPointCurve(beginPoint, controlPoint, endPoint) {
-        socket.send(JSON.stringify({beginPoint, controlPoint, endPoint}));
+        socket.readyState === 1 ?
+            socket.send(JSON.stringify({beginPoint, controlPoint, endPoint})) : "";
     }
 
     // --------------------------
@@ -95,6 +96,7 @@
         console.log(counter++);
         // sendPerFrameByFullScreenImg(canvas.toDataURL());
         sendPerFrameByPointCurve(beginPoint, controlPoint, endPoint);
+        return true;
     }
 </script>
 </body>

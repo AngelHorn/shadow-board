@@ -21,7 +21,8 @@
     }
 
     function sendPerFrameByPointCurve(beginPoint, controlPoint, endPoint) {
-        socket.send(JSON.stringify({beginPoint, controlPoint, endPoint}));
+        socket.readyState === 1 ?
+            socket.send(JSON.stringify({beginPoint, controlPoint, endPoint})) : "";
     }
 
     function drawPerFrameByPointCurve(img_data) {
@@ -38,7 +39,7 @@
     const ctx = canvas.getContext('2d');
     // 设置线条颜色
     ctx.strokeStyle = 'red';
-    ctx.lineWidth = 10;
+    ctx.lineWidth = 2;
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
 
