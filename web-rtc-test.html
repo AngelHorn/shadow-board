@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<button id="button">send</button>
+<script src="js/adapter.js"></script>
+<script>
+    var socket = new WebSocket("ws://192.168.0.117:9502");
+    var sdp;
+
+    function sendSocket(type = "", data) {
+        socket.send(JSON.stringify({"type": type, "data": data}));
+        // return;
+        switch (type) {
+            case "description":
+                // socket.send(JSON.stringify({"type": type, "data": JSON.stringify(data)}));
+                break;
+            case "ice-candidate":
+                // socket.send(JSON.stringify({"type": type, "data": JSON.stringify(data)}));
+                break;
+            default:
+                console.log("sending socket is fucked");
+        }
+    }
+</script>
+<script>
+    var configuration = {
+        iceServers: [{
+            urls: "stun:stun.services.mozilla.com",
+            username: "louis@mozilla.com",
+            credential: "webrtcdemo"
+        }, {
+            urls: ["stun:stun.example.com", "stun:stun-1.example.com"]
+        }]
+    };
+    var pc = new RTCPeerConnection(configuration);
+    pc.onaddstream = function (obj) {
+        var video_ele = document.createElement("video");
+        document.appendChild(video_ele);
+        video_ele.srcObject = obj.stream;
+    }
+    //chrome version
+    // pc.onaddstream = function(event) {
+    //     document.getElementById("received_video").srcObject = event.stream;
+    //     document.getElementById("hangup-button").disabled = false;
+    // };
+
+    navigator.mediaDevices.getUserMedia({audio: true}, function (stream) {
+        console.log("navigator.mediaDevices.getUserMedia")
+        pc.onaddstream({stream: stream});
+        // Adding a local stream won't trigger the onaddstream callback
+        pc.addStream(stream);
+
+        pc.createOffer(function (offer) {
+            pc.setLocalDescription(new RTCSessionDescription(offer), function () {
+                // send the offer to a server to be forwarded to the friend you're calling.
+            }, error);
+        }, error);
+    })
+
+    socket.onopen = function () {
+        connectPeers();
+    }
+
+    function connectPeers() {
+        // Create the local connection and its event listeners
+        console.log("connectPeers")
+
+        // PeerConnection需要传递一个RTCConfiguration对象作为参数，如果你没有传递参数的话，火狐浏览器会自动提供一个参数
+        localConnection = new RTCPeerConnection();
+
+        // Create the data channel and establish its event listeners
+        sendChannel = localConnection.createDataChannel("sendChannel");
+        var button_ele = document.getElementById("button");
+        button_ele.addEventListener("click", () => {
+            console.log(sendChannel)
+            sendChannel.send("i am data");
+        })
+        sendChannel.onopen = function () {
+            console.log("sendChannel.onopen");
+        };
+        sendChannel.onclose = (e) => console.log("shit2");
+
+        //push to remote
+        localConnection.onicecandidate = function (e) {
+            sendSocket("ice-candidate", e.candidate);
+        };
+
+        localConnection.createOffer()
+            .then(offer => {
+                localConnection.setLocalDescription(offer);
+                sendSocket("description", offer);
+            })
+
+        socket.onmessage = function (event) {
+            // console.log(event.data);
+            let receiveData = JSON.parse(event.data);
+            switch (receiveData.type) {
+                case "description":
+                    goSetDescription(receiveData.data);
+                    break;
+                case "ice-candidate":
+                    goSetIceCandidate(receiveData.data);
+                    break;
+                default:
+                    console.log("receive socket is fucked")
+            }
+        }
+    }
+
+    function goSetDescription(receiveData) {
+        // console.log(receiveData);
+        sdp = receiveData;
+        localConnection.setRemoteDescription(new RTCSessionDescription(sdp));
+    }
+
+    function goSetIceCandidate(receiveData) {
+        console.log(receiveData);
+        !receiveData || localConnection.addIceCandidate(receiveData).catch((error) => console.log(error));
+    }
+
+</script>
+</body>
+</html>

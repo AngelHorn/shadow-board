@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<script src="js/adapter.js"></script>
+<script>
+    var sdp;
+    var socket = new WebSocket("ws://192.168.0.117:9502");
+
+    function sendSocket(type = "", data) {
+        socket.send(JSON.stringify({"type": type, "data": data}));
+        // return;
+        switch (type) {
+            case "description":
+                // socket.send(JSON.stringify({"type": type, "data": JSON.stringify(data)}));
+                break;
+            case "ice-candidate":
+                // socket.send(JSON.stringify({"type": type, "data": JSON.stringify(data)}));
+                break;
+            default:
+                console.log("sending socket is fucked");
+        }
+    }
+</script>
+<script>
+    var configuration = {
+        iceServers: [{
+            urls: ["stun:stun1.l.google.com:19302"]
+        }]
+    };
+    var pc = new RTCPeerConnection(configuration);
+    pc.ontrack = function (obj) {
+        var video_ele = document.createElement("video");
+        document.appendChild(video_ele);
+        video_ele.srcObject = obj.streams[0];
+    }
+    //chrome version
+    // pc.onaddstream = function(event) {
+    //     document.getElementById("received_video").srcObject = event.stream;
+    //     document.getElementById("hangup-button").disabled = false;
+    // };
+
+
+    // Create the remote connection and its event listeners
+
+    // PeerConnection需要传递一个RTCConfiguration对象作为参数，如果你没有传递参数的话，火狐浏览器会自动提供一个参数
+    remoteConnection = new RTCPeerConnection();
+    remoteConnection.ondatachannel = function (event) {
+        console.log("remoteConnection.ondatachannel");
+
+        receiveChannel = event.channel;
+        receiveChannel.onmessage = function (msg) {
+            console.log("receiveChannel.onmessage", msg);
+        };
+        // receiveChannel.onopen = handleReceiveChannelStatusChange;
+        // receiveChannel.onclose = handleReceiveChannelStatusChange;
+    };
+
+    remoteConnection.onicecandidate = function (e) {
+        //push to local
+        // !e.candidate || remoteConnection.addIceCandidate(e.candidate).catch(() => console.log("error"));
+        console.log(e.candidate);
+    }
+
+    // console.log(remoteConnection);
+
+    // remoteConnection.createAnswer()
+    //     .then(() => remoteConnection.setRemoteDescription(localConnection.localDescription))
+    // .then(() => remoteConnection.createAnswer())
+    // .then(answer => remoteConnection.setLocalDescription(answer))
+    ;
+
+
+    socket.onmessage = function (event) {
+        // console.log(event.data);
+        let receiveData = JSON.parse(event.data);
+        switch (receiveData.type) {
+            case "description":
+                goSetDescription(receiveData.data);
+                break;
+            case "ice-candidate":
+                goSetIceCandidate(receiveData.data);
+                break;
+            default:
+                console.log("receive socket is fucked")
+        }
+    }
+
+    function goSetDescription(receiveData) {
+        sdp = receiveData;
+        remoteConnection.setRemoteDescription(new RTCSessionDescription(sdp))
+            .then(() => remoteConnection.createAnswer())
+            .then(answer => {
+                remoteConnection.setLocalDescription(answer);
+                sendSocket("description", answer);
+                console.log(remoteConnection);
+            });
+    }
+
+    function goSetIceCandidate(receiveData) {
+        !receiveData || remoteConnection.addIceCandidate(receiveData).catch((error) => console.log(error));
+        console.log(receiveData);
+    }
+</script>
+</body>
+</html>
