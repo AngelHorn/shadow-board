@@ -5,6 +5,9 @@
     <title>Title</title>
 </head>
 <body>
+<audio width="400" height="300" controls>
+
+</audio>
 <script src="js/adapter.js"></script>
 <script>
     var sdp;
@@ -28,14 +31,25 @@
 <script>
     var configuration = {
         iceServers: [{
-            urls: ["stun:stun1.l.google.com:19302"]
+            urls: "stun:stun.services.mozilla.com",
+            username: "louis@mozilla.com",
+            credential: "webrtcdemo"
+        }, {
+            urls: ["stun:stun.example.com", "stun:stun-1.example.com"]
         }]
     };
-    var pc = new RTCPeerConnection(configuration);
-    pc.ontrack = function (obj) {
-        var video_ele = document.createElement("video");
-        document.appendChild(video_ele);
-        video_ele.srcObject = obj.streams[0];
+    const remoteConnection = new RTCPeerConnection(configuration);
+
+    // var remoteConnection = new RTCPeerConnection();
+
+    remoteConnection.ontrack = function (e) {
+        console.log(e);
+        let video_ele = document.querySelector('audio');
+        if (video_ele.srcObject !== e.streams[0]) {
+            video_ele.srcObject = e.streams[0];
+            video_ele.play();
+            console.log('Received remote stream');
+        }
     }
     //chrome version
     // pc.onaddstream = function(event) {
@@ -47,9 +61,9 @@
     // Create the remote connection and its event listeners
 
     // PeerConnection需要传递一个RTCConfiguration对象作为参数，如果你没有传递参数的话，火狐浏览器会自动提供一个参数
-    remoteConnection = new RTCPeerConnection();
+
     remoteConnection.ondatachannel = function (event) {
-        console.log("remoteConnection.ondatachannel");
+        // console.log("remoteConnection.ondatachannel");
 
         receiveChannel = event.channel;
         receiveChannel.onmessage = function (msg) {
@@ -60,10 +74,8 @@
     };
 
     remoteConnection.onicecandidate = function (e) {
-        //push to local
-        // !e.candidate || remoteConnection.addIceCandidate(e.candidate).catch(() => console.log("error"));
-        console.log(e.candidate);
-    }
+        sendSocket("ice-candidate", e.candidate);
+    };
 
     // console.log(remoteConnection);
 
@@ -96,13 +108,13 @@
             .then(answer => {
                 remoteConnection.setLocalDescription(answer);
                 sendSocket("description", answer);
-                console.log(remoteConnection);
+                // console.log(remoteConnection);
             });
     }
 
     function goSetIceCandidate(receiveData) {
         !receiveData || remoteConnection.addIceCandidate(receiveData).catch((error) => console.log(error));
-        console.log(receiveData);
+        // console.log(receiveData);
     }
 </script>
 </body>

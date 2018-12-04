@@ -5,6 +5,9 @@
     <title>Title</title>
 </head>
 <body>
+<audio id="audio" width="400" height="300" controls autoplay>
+
+</audio>
 <button id="button">send</button>
 <script src="js/adapter.js"></script>
 <script>
@@ -36,11 +39,17 @@
             urls: ["stun:stun.example.com", "stun:stun-1.example.com"]
         }]
     };
-    var pc = new RTCPeerConnection(configuration);
-    pc.onaddstream = function (obj) {
-        var video_ele = document.createElement("video");
-        document.appendChild(video_ele);
+    var localConnection = new RTCPeerConnection(configuration);
+
+    // PeerConnection需要传递一个RTCConfiguration对象作为参数，如果你没有传递参数的话，火狐浏览器会自动提供一个参数
+    // var localConnection = new RTCPeerConnection();
+
+
+    localConnection.onaddstream = function (obj) {
+        // console.log("localConnection.onaddstream", obj)
+        let video_ele = document.getElementById("audio");
         video_ele.srcObject = obj.stream;
+        // localConnection.addStream(obj.stream).catch((error) => console.log(error))
     }
     //chrome version
     // pc.onaddstream = function(event) {
@@ -48,39 +57,36 @@
     //     document.getElementById("hangup-button").disabled = false;
     // };
 
-    navigator.mediaDevices.getUserMedia({audio: true}, function (stream) {
-        console.log("navigator.mediaDevices.getUserMedia")
-        pc.onaddstream({stream: stream});
-        // Adding a local stream won't trigger the onaddstream callback
-        pc.addStream(stream);
 
-        pc.createOffer(function (offer) {
-            pc.setLocalDescription(new RTCSessionDescription(offer), function () {
-                // send the offer to a server to be forwarded to the friend you're calling.
-            }, error);
-        }, error);
-    })
 
     socket.onopen = function () {
-        connectPeers();
+
+        navigator.mediaDevices.getUserMedia({audio: true}).then(function (stream) {
+            // console.log("navigator.mediaDevices.getUserMedia")
+            // localConnection.onaddstream({stream: stream})
+            // Adding a local stream won't trigger the onaddstream callback
+            // localConnection.addStream(stream)
+            stream.getTracks().forEach(track => localConnection.addTrack(track, stream));
+        }).then(()=>{
+            connectPeers();
+        });
+
+        ;
     }
 
     function connectPeers() {
         // Create the local connection and its event listeners
-        console.log("connectPeers")
-
-        // PeerConnection需要传递一个RTCConfiguration对象作为参数，如果你没有传递参数的话，火狐浏览器会自动提供一个参数
-        localConnection = new RTCPeerConnection();
+        // console.log("connectPeers")
 
         // Create the data channel and establish its event listeners
-        sendChannel = localConnection.createDataChannel("sendChannel");
-        var button_ele = document.getElementById("button");
+        const sendChannel = localConnection.createDataChannel("sendChannel");
+        const button_ele = document.getElementById("button");
         button_ele.addEventListener("click", () => {
             console.log(sendChannel)
             sendChannel.send("i am data");
         })
         sendChannel.onopen = function () {
-            console.log("sendChannel.onopen");
+            // console.log("sendChannel.onopen");
         };
         sendChannel.onclose = (e) => console.log("shit2");
 
@@ -114,11 +120,20 @@
     function goSetDescription(receiveData) {
         // console.log(receiveData);
         sdp = receiveData;
-        localConnection.setRemoteDescription(new RTCSessionDescription(sdp));
+        console.log(sdp);
+        localConnection.setRemoteDescription(new RTCSessionDescription(sdp))
+            .then(function () {
+                // return navigator.mediaDevices.getUserMedia({audio: true});
+            })
+            .then(function (stream) {
+                // previewElement.srcObject = stream;
+                // console.log(localConnection.iceConnectionState);
+                // stream.getTracks().forEach(track => localConnection.addTrack(track, stream));
+            });
     }
 
     function goSetIceCandidate(receiveData) {
-        console.log(receiveData);
+        // console.log(receiveData);
         !receiveData || localConnection.addIceCandidate(receiveData).catch((error) => console.log(error));
     }
 
