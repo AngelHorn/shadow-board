@@ -10,8 +10,14 @@
 </audio>
 <script src="js/adapter.js"></script>
 <script>
+    const configuration = {
+        "iceServers": [{
+            "url": "stun:0x00000000.me:3478"
+        }, {"url": "turn:0x00000000.me:3478", "username": "a", "credential": "b"}]
+    }
+
     var sdp;
-    var socket = new WebSocket("ws://192.168.0.117:9502");
+    var socket = new WebSocket("wss://0x00000000.me:9502");
 
     function sendSocket(type = "", data) {
         socket.send(JSON.stringify({"type": type, "data": data}));
@@ -29,15 +35,7 @@
     }
 </script>
 <script>
-    var configuration = {
-        iceServers: [{
-            urls: "stun:stun.services.mozilla.com",
-            username: "louis@mozilla.com",
-            credential: "webrtcdemo"
-        }, {
-            urls: ["stun:stun.example.com", "stun:stun-1.example.com"]
-        }]
-    };
+
     const remoteConnection = new RTCPeerConnection(configuration);
 
     // var remoteConnection = new RTCPeerConnection();
@@ -63,7 +61,7 @@
     // PeerConnection需要传递一个RTCConfiguration对象作为参数，如果你没有传递参数的话，火狐浏览器会自动提供一个参数
 
     remoteConnection.ondatachannel = function (event) {
-        // console.log("remoteConnection.ondatachannel");
+        console.log("remoteConnection.ondatachannel");
 
         receiveChannel = event.channel;
         receiveChannel.onmessage = function (msg) {
@@ -74,6 +72,7 @@
     };
 
     remoteConnection.onicecandidate = function (e) {
+        console.log(e.candidate.type);
         sendSocket("ice-candidate", e.candidate);
     };
 
@@ -112,8 +111,17 @@
             });
     }
 
-    function goSetIceCandidate(receiveData) {
-        !receiveData || remoteConnection.addIceCandidate(receiveData).catch((error) => console.log(error));
+    function goSetIceCandidate(candidate) {
+        if (candidate) {
+            console.log((new RTCIceCandidate(candidate)).type);
+        }
+        // if (!candidate || (new RTCIceCandidate(candidate)).type != "srflx") {
+        //     return;
+        // }
+        // console.log("fucked")
+
+        !candidate || remoteConnection.addIceCandidate(candidate).catch((error) => console.log(error));
+        // !candidate || remoteConnection.addIceCandidate(new RTCIceCandidate(candidate)).catch((error) => console.log(error));
         // console.log(receiveData);
     }
 </script>

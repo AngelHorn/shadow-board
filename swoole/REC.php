@@ -19,9 +19,10 @@ $ws->on('message', function ($ws, $frame) {
 //    var_dump($ws);
 
     //这里不应该推送给自己 但是我太懒了 就这样吧
-    foreach($ws->connections as $fd)
-    {
-        $ws->push($fd, $frame->data);
+    foreach ($ws->connections as $fd) {
+        if ($fd != $frame->fd) {
+            $ws->push($fd, $frame->data);
+        }
     }
 //    $ws->push($frame->fd + 1, $frame->data);
 //    $ws->push($frame->data);

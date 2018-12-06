@@ -11,7 +11,13 @@
 <button id="button">send</button>
 <script src="js/adapter.js"></script>
 <script>
-    var socket = new WebSocket("ws://192.168.0.117:9502");
+    const configuration = {
+        "iceServers": [{
+            "url": "stun:0x00000000.me:3478"
+        }, {"url": "turn:0x00000000.me:3478", "username": "a", "credential": "b"}]
+    }
+
+    var socket = new WebSocket("wss://0x00000000.me:9502");
     var sdp;
 
     function sendSocket(type = "", data) {
@@ -30,33 +36,25 @@
     }
 </script>
 <script>
-    var configuration = {
-        iceServers: [{
-            urls: "stun:stun.services.mozilla.com",
-            username: "louis@mozilla.com",
-            credential: "webrtcdemo"
-        }, {
-            urls: ["stun:stun.example.com", "stun:stun-1.example.com"]
-        }]
-    };
+
+
     var localConnection = new RTCPeerConnection(configuration);
 
     // PeerConnection需要传递一个RTCConfiguration对象作为参数，如果你没有传递参数的话，火狐浏览器会自动提供一个参数
     // var localConnection = new RTCPeerConnection();
-
-
-    localConnection.onaddstream = function (obj) {
-        // console.log("localConnection.onaddstream", obj)
-        let video_ele = document.getElementById("audio");
-        video_ele.srcObject = obj.stream;
-        // localConnection.addStream(obj.stream).catch((error) => console.log(error))
-    }
+    //
+    //
+    // localConnection.onaddstream = function (obj) {
+    //     // console.log("localConnection.onaddstream", obj)
+    //     let video_ele = document.getElementById("audio");
+    //     video_ele.srcObject = obj.stream;
+    //     // localConnection.addStream(obj.stream).catch((error) => console.log(error))
+    // }
     //chrome version
     // pc.onaddstream = function(event) {
     //     document.getElementById("received_video").srcObject = event.stream;
     //     document.getElementById("hangup-button").disabled = false;
     // };
-
 
 
     socket.onopen = function () {
@@ -67,7 +65,7 @@
             // Adding a local stream won't trigger the onaddstream callback
             // localConnection.addStream(stream)
             stream.getTracks().forEach(track => localConnection.addTrack(track, stream));
-        }).then(()=>{
+        }).then(() => {
             connectPeers();
         });
 
@@ -86,12 +84,13 @@
             sendChannel.send("i am data");
         })
         sendChannel.onopen = function () {
-            // console.log("sendChannel.onopen");
+            console.log("sendChannel.onopen");
         };
         sendChannel.onclose = (e) => console.log("shit2");
 
         //push to remote
         localConnection.onicecandidate = function (e) {
+            console.log(e.candidate.type);
             sendSocket("ice-candidate", e.candidate);
         };
 
@@ -132,9 +131,16 @@
             });
     }
 
-    function goSetIceCandidate(receiveData) {
-        // console.log(receiveData);
-        !receiveData || localConnection.addIceCandidate(receiveData).catch((error) => console.log(error));
+    function goSetIceCandidate(candidate) {
+        if (candidate) {
+            console.log((new RTCIceCandidate(candidate)).type);
+        }
+        // if (!candidate || (new RTCIceCandidate(candidate)).type != "srflx") {
+        //     return;
+        // }
+        // console.log("fucked")
+        !candidate || localConnection.addIceCandidate(candidate).catch((error) => console.log(error));
+        // !candidate || localConnection.addIceCandidate(new RTCIceCandidate(candidate)).catch((error) => console.log(error));
     }
 
 </script>

@@ -15,7 +15,7 @@
 <script type="text/javascript" charset="utf-8">
     function store() {
 
-        var socket = new WebSocket("ws://0x00000000.me:9502");
+        var socket = new WebSocket("wss://0x00000000.me:9502");
         var video = document.getElementById("video");
         var back = document.getElementById('output');
         var backcontext = back.getContext('2d');
@@ -96,7 +96,7 @@
 <script>
 
     //创建一个socket实例
-    var receiver_socket = new WebSocket("ws://192.168.0.117:9502");
+    var receiver_socket = new WebSocket("wss://0x00000000.me:9502");
     receiver_socket.binaryType = "arraybuffer";
 
     var video2 = document.getElementById('video2');
