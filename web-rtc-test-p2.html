@@ -5,42 +5,32 @@
     <title>Title</title>
 </head>
 <body>
-<audio width="400" height="300" controls>
 
-</audio>
+<audio width="400" height="300" controls></audio>
+<button id="send-text">Send DataChannel</button>
+<button id="send-stream">Send StreamChannel</button>
+
 <script src="js/adapter.js"></script>
 <script>
     const configuration = {
-        "iceServers": [{
-            "url": "stun:0x00000000.me:3478"
-        }, {"url": "turn:0x00000000.me:3478", "username": "a", "credential": "b"}]
-    }
+        "iceServers": [
+            {"url": "stun:0x00000000.me:3478"},
+            {"url": "turn:0x00000000.me:3478", "username": "a", "credential": "b"}
+        ]
+    };
 
-    var sdp;
     var socket = new WebSocket("wss://0x00000000.me:9502");
+    const room_id = "global";
 
     function sendSocket(type = "", data) {
         socket.send(JSON.stringify({"type": type, "data": data}));
-        // return;
-        switch (type) {
-            case "description":
-                // socket.send(JSON.stringify({"type": type, "data": JSON.stringify(data)}));
-                break;
-            case "ice-candidate":
-                // socket.send(JSON.stringify({"type": type, "data": JSON.stringify(data)}));
-                break;
-            default:
-                console.log("sending socket is fucked");
-        }
     }
 </script>
 <script>
 
-    const remoteConnection = new RTCPeerConnection(configuration);
+    const peer_connection = new RTCPeerConnection(configuration);
 
-    // var remoteConnection = new RTCPeerConnection();
-
-    remoteConnection.ontrack = function (e) {
+    peer_connection.ontrack = function (e) {
         console.log(e);
         let video_ele = document.querySelector('audio');
         if (video_ele.srcObject !== e.streams[0]) {
@@ -49,41 +39,30 @@
             console.log('Received remote stream');
         }
     }
-    //chrome version
-    // pc.onaddstream = function(event) {
-    //     document.getElementById("received_video").srcObject = event.stream;
-    //     document.getElementById("hangup-button").disabled = false;
-    // };
 
-
-    // Create the remote connection and its event listeners
-
-    // PeerConnection需要传递一个RTCConfiguration对象作为参数，如果你没有传递参数的话，火狐浏览器会自动提供一个参数
-
-    remoteConnection.ondatachannel = function (event) {
-        console.log("remoteConnection.ondatachannel");
-
-        receiveChannel = event.channel;
+    peer_connection.ondatachannel = function (event) {
+        console.log("peer_connection.ondatachannel");
+        const receiveChannel = event.channel;
         receiveChannel.onmessage = function (msg) {
             console.log("receiveChannel.onmessage", msg);
         };
-        // receiveChannel.onopen = handleReceiveChannelStatusChange;
-        // receiveChannel.onclose = handleReceiveChannelStatusChange;
     };
 
-    remoteConnection.onicecandidate = function (e) {
-        console.log(e.candidate.type);
+    peer_connection.onicecandidate = function (e) {
+        console.log(e.candidate)
         sendSocket("ice-candidate", e.candidate);
     };
 
-    // console.log(remoteConnection);
-
-    // remoteConnection.createAnswer()
-    //     .then(() => remoteConnection.setRemoteDescription(localConnection.localDescription))
-    // .then(() => remoteConnection.createAnswer())
-    // .then(answer => remoteConnection.setLocalDescription(answer))
-    ;
-
+    socket.onopen = function () {
+        const send_stream_button = document.getElementById("send-stream");
+        send_stream_button.addEventListener("click", (e) => {
+            send_stream_button.disabled = true;
+            connectPeers();
+        });
+        navigator.mediaDevices.getUserMedia({audio: true}).then(function (stream) {
+            stream.getTracks().forEach(track => peer_connection.addTrack(track, stream));
+        });
+    }
 
     socket.onmessage = function (event) {
         // console.log(event.data);
@@ -101,28 +80,18 @@
     }
 
     function goSetDescription(receiveData) {
-        sdp = receiveData;
-        remoteConnection.setRemoteDescription(new RTCSessionDescription(sdp))
-            .then(() => remoteConnection.createAnswer())
+        peer_connection.setRemoteDescription(new RTCSessionDescription(receiveData))
+            .then(() => peer_connection.createAnswer())
             .then(answer => {
-                remoteConnection.setLocalDescription(answer);
+                peer_connection.setLocalDescription(answer);
                 sendSocket("description", answer);
-                // console.log(remoteConnection);
+                // console.log(peer_connection);
             });
     }
 
     function goSetIceCandidate(candidate) {
-        if (candidate) {
-            console.log((new RTCIceCandidate(candidate)).type);
-        }
-        // if (!candidate || (new RTCIceCandidate(candidate)).type != "srflx") {
-        //     return;
-        // }
-        // console.log("fucked")
-
-        !candidate || remoteConnection.addIceCandidate(candidate).catch((error) => console.log(error));
-        // !candidate || remoteConnection.addIceCandidate(new RTCIceCandidate(candidate)).catch((error) => console.log(error));
-        // console.log(receiveData);
+        // !candidate || console.log(candidate.type);
+        !candidate || peer_connection.addIceCandidate(candidate).catch((error) => console.log(error));
     }
 </script>
 </body>

@@ -2,9 +2,132 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>$Title$</title>
+    <title>Title</title>
 </head>
 <body>
-$END$
+
+<audio width="400" height="300" controls></audio>
+<button id="send-text">Send DataChannel</button>
+<button id="send-stream">Send StreamChannel</button>
+
+<script src="js/adapter.js"></script>
+<script>
+    const configuration = {
+        "iceServers": [
+            {"url": "stun:0x00000000.me:3478"},
+            {"url": "turn:0x00000000.me:3478", "username": "a", "credential": "b"}
+        ]
+    };
+
+    var socket = new WebSocket("wss://0x00000000.me:9502");
+    const room_id = "global";
+
+    function sendSocket(type = "", data) {
+        socket.send(JSON.stringify({"type": type, "data": data}));
+    }
+</script>
+<script>
+    const peer_connection = new RTCPeerConnection(configuration);
+    const peer_send_channel = peer_connection.createDataChannel("sendChannel");
+
+    socket.onopen = function () {
+        const send_stream_button = document.getElementById("send-stream");
+        send_stream_button.addEventListener("click", () => {
+            send_stream_button.disabled = true;
+            goRequestRTC();
+        });
+        navigator.mediaDevices.getUserMedia({audio: true}).then(function (stream) {
+            stream.getTracks().forEach(track => peer_connection.addTrack(track, stream));
+        });
+    };
+
+    socket.onmessage = function (event) {
+        // console.log(event.data);
+        let receiveData = JSON.parse(event.data);
+        switch (receiveData.type) {
+            case "description":
+                goSetDescription(receiveData.data);
+                break;
+            case "ice-candidate":
+                goSetIceCandidate(receiveData.data);
+                break;
+            default:
+                console.log("receive socket is fucked")
+        }
+    }
+
+
+    peer_connection.ontrack = function (e) {
+        let video_ele = document.querySelector('audio');
+        if (video_ele.srcObject !== e.streams[0]) {
+            video_ele.srcObject = e.streams[0];
+            video_ele.play();
+            console.log('Received remote stream');
+        }
+    }
+
+    peer_connection.ondatachannel = function (event) {
+        console.log("peer_connection.ondatachannel");
+        const receiveChannel = event.channel;
+        receiveChannel.onmessage = function (msg) {
+            console.log("receiveChannel.onmessage", msg);
+        };
+    };
+
+    peer_connection.onicecandidate = function (e) {
+        // console.log(e.candidate);
+        sendSocket("ice-candidate", e.candidate);
+    };
+
+
+    peer_send_channel.onopen = function () {
+        console.log("sendChannel.onopen");
+        const button_ele = document.getElementById("send-text");
+        button_ele.addEventListener("click", () => {
+            console.log(peer_send_channel);
+            peer_send_channel.send("i am data");
+        });
+    };
+    peer_send_channel.onclose = () => console.log("shit2");
+
+
+    function goRequestRTC() {
+        peer_connection.createOffer()
+            .then(offer => {
+                peer_connection.setLocalDescription(offer);
+                sendSocket("description", offer);
+            });
+    }
+
+    function goResponseRTC(receiveData) {
+
+    }
+
+
+    function goSetDescription(receiveData) {
+
+        if (receiveData.type === "offer") {
+            //both not have local and remote so this is receive RTC version
+            peer_connection.setRemoteDescription(new RTCSessionDescription(receiveData))
+                .then(() => peer_connection.createAnswer())
+                .then(answer => {
+                    peer_connection.setLocalDescription(answer);
+                    sendSocket("description", answer);
+                });
+        } else if (receiveData.type === "answer") {
+            //not have remote and already have local so this is send RTC version
+            peer_connection.setRemoteDescription(new RTCSessionDescription(receiveData))
+                .then();
+        } else {
+            console.log("set des is fucked", peer_connection.localDescription, peer_connection.remoteDescription);
+        }
+    }
+
+    function goSetIceCandidate(candidate) {
+        // !candidate || console.log(candidate.type);
+        !candidate || peer_connection.addIceCandidate(candidate).catch((error) => console.log(error));
+    }
+
+</script>
 </body>
 </html>
