@@ -49,6 +49,7 @@
     canvas.addEventListener('mouseout', up, false);
 
     function down(evt) {
+        // console.log(evt);
         isDown = true;
         const {x, y} = getPos(evt);
         points.push({x, y});
@@ -90,10 +91,15 @@
     }
 
     function getPos(evt) {
+        // console.log(evt);
         return {
-            x: evt.clientX,
-            y: evt.clientY
+            x: evt.offsetX,
+            y: evt.offsetY
         }
+        // return {
+        //     x: evt.clientX,
+        //     y: evt.clientY
+        // }
     }
 
     function drawLine(beginPoint, controlPoint, endPoint, isNeedSend = true) {
@@ -102,7 +108,7 @@
         ctx.quadraticCurveTo(controlPoint.x, controlPoint.y, endPoint.x, endPoint.y);
         ctx.stroke();
         ctx.closePath();
-        console.log(counter++);
+        // console.log(counter++);
         // sendPerFrameByFullScreenImg(canvas.toDataURL());
         if (isNeedSend === true) {
             sendPerFrameByPointCurve(beginPoint, controlPoint, endPoint);
