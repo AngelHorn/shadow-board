@@ -32,7 +32,7 @@
     }
 
     // --------------------------
-    let isDown = false;
+    let isMouseDown = false;
     let points = [];
     let beginPoint = null;
     const canvas = document.querySelector('#canvas');
@@ -50,14 +50,14 @@
 
     function down(evt) {
         // console.log(evt);
-        isDown = true;
+        isMouseDown = true;
         const {x, y} = getPos(evt);
         points.push({x, y});
         beginPoint = {x, y};
     }
 
     function move(evt) {
-        if (!isDown) return;
+        if (!isMouseDown) return;
 
         const {x, y} = getPos(evt);
         points.push({x, y});
@@ -75,7 +75,7 @@
     }
 
     function up(evt) {
-        if (!isDown) return;
+        if (!isMouseDown) return;
         const {x, y} = getPos(evt);
         points.push({x, y});
 
