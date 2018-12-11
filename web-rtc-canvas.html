@@ -165,7 +165,7 @@
     }
 
     function sendPerFrameByPointCurve(beginPoint, controlPoint, endPoint) {
-        // sendSocket("draw-canvas", {beginPoint, controlPoint, endPoint});
+        sendSocket("draw-canvas", {beginPoint, controlPoint, endPoint});
     }
 
     function drawPerFrameByPointCurve(receivePoints) {
