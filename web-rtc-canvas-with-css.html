@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="assets/bootstrap.min.css">
+</head>
+<body>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col">
+            <nav class="navbar navbar-dark bg-dark">
+                <a class="navbar-brand" href="#">
+                    <img src="//v4.bootcss.com/assets/brand/bootstrap-solid.svg" width="30" height="30"
+                         class="d-inline-block align-top">
+                    Bootstrap
+                </a>
+            </nav>
+        </div>
+    </div>
+    <hr>
+    <div class="row">
+        <div class="col-10">
+            <div class="card border-info">
+                <div class="card-header text-center list-group-item-info">邪恶的画板</div>
+                <div class="card-body-fuck text-info-fuck" id="canvas-container">
+                    <canvas id="canvas" width="1600" height="900" style="border: 0px solid #000000;"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-2">
+            <div class="card border-info " style="width: 18rem;">
+                <div class="card-header list-group-item-info text-center">
+                    你大爷的列表
+                </div>
+                <ul class="list-group list-group-flush" style="height: 500px;overflow-y:auto;">
+                    <button class="list-group-item d-flex justify-content-between align-items-center list-group-item-action">
+                        大壮
+                        <a href="javascript:void(0);" class="btn btn-outline-danger">连接</a>
+                    </button>
+                    <button class="list-group-item d-flex justify-content-between align-items-center list-group-item-action">
+                        小毛
+                        <a href="javascript:void(0);" class="btn btn-outline-danger">连接</a>
+                    </button>
+                    <button class="list-group-item d-flex justify-content-between align-items-center list-group-item-action">
+                        二宝
+                        <a href="javascript:void(0);" class="btn btn-outline-danger">连接</a>
+                    </button>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<audio width="400" height="300" controls></audio>
+<button id="send-text">Send DataChannel</button>
+<button id="send-stream">Send StreamChannel</button>
+您的SID是：
+<span id="sid">sid</span>
+<script src="js/adapter.js"></script>
+<script>
+    const configuration = {
+        "iceServers": [
+            {"url": "stun:0x00000000.me:3478"},
+            {"url": "turn:0x00000000.me:3478", "username": "a", "credential": "b"}
+        ]
+    };
+
+    const socket = new WebSocket("wss://0x00000000.me:9502");
+    const canvas = document.querySelector('#canvas');
+    resizeCanvas();
+    const ctx = canvas.getContext('2d');
+    let isMouseDown = false;
+    let canvasPoints = [];
+    let canvasBeginPoint = null;
+    // 设置线条颜色
+    ctx.strokeStyle = 'red';
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+
+    canvas.addEventListener('mousedown', down, false);
+    canvas.addEventListener('mousemove', move, false);
+    canvas.addEventListener('mouseup', up, false);
+    canvas.addEventListener('mouseout', up, false);
+
+    const peer_connection = new RTCPeerConnection(configuration);
+    const peer_send_channel = peer_connection.createDataChannel("sendChannel");
+    let sid = null;
+
+    socket.onopen = function (e) {
+        const send_stream_button = document.getElementById("send-stream");
+        send_stream_button.addEventListener("click", () => {
+            send_stream_button.disabled = true;
+            goRequestRTC();
+        });
+        navigator.mediaDevices.getUserMedia({audio: true}).then(function (stream) {
+            stream.getTracks().forEach(track => peer_connection.addTrack(track, stream));
+        });
+    };
+
+    socket.onmessage = function (event) {
+        // console.log(event.data);
+        let receiveData = JSON.parse(event.data);
+        switch (receiveData.type) {
+            case "set-sid":
+                goSetSid(receiveData.data);
+                break;
+            case "draw-canvas":
+                drawPerFrameByPointCurve(receiveData.data);
+                break;
+            case "description":
+                goSetDescription(receiveData.data);
+                break;
+            case "ice-candidate":
+                goSetIceCandidate(receiveData.data);
+                break;
+            default:
+                console.log("receive socket is fucked")
+        }
+    }
+
+
+    peer_connection.ontrack = function (e) {
+        let video_ele = document.querySelector('audio');
+        if (video_ele.srcObject !== e.streams[0]) {
+            video_ele.srcObject = e.streams[0];
+            video_ele.play();
+            console.log('Received remote stream');
+        }
+    }
+
+    peer_connection.ondatachannel = function (event) {
+        console.log("peer_connection.ondatachannel");
+        const receiveChannel = event.channel;
+        receiveChannel.onmessage = function (msg) {
+            console.log("receiveChannel.onmessage", msg);
+        };
+    };
+
+    peer_connection.onicecandidate = function (e) {
+        // console.log(e.candidate);
+        sendSocket("ice-candidate", e.candidate);
+    };
+
+
+    peer_send_channel.onopen = function () {
+        console.log("sendChannel.onopen");
+        const button_ele = document.getElementById("send-text");
+        button_ele.addEventListener("click", () => {
+            console.log(peer_send_channel);
+            peer_send_channel.send("i am data");
+        });
+    };
+    peer_send_channel.onclose = () => console.log("shit2");
+
+
+    function goRequestRTC() {
+        peer_connection.createOffer()
+            .then(offer => {
+                peer_connection.setLocalDescription(offer);
+                sendSocket("description", offer);
+            });
+    }
+
+    function goResponseRTC(receiveData) {
+    }
+
+    function goSetSid(receiveData) {
+        sid = receiveData;//global var setting
+        const sid_div = document.getElementById("sid");
+        sid_div.innerText = sid;
+    }
+
+    function goSetDescription(receiveData) {
+
+        if (receiveData.type === "offer") {
+            //both not have local and remote so this is receive RTC version
+            peer_connection.setRemoteDescription(new RTCSessionDescription(receiveData))
+                .then(() => peer_connection.createAnswer())
+                .then(answer => {
+                    peer_connection.setLocalDescription(answer);
+                    sendSocket("description", answer);
+                });
+        } else if (receiveData.type === "answer") {
+            //not have remote and already have local so this is send RTC version
+            peer_connection.setRemoteDescription(new RTCSessionDescription(receiveData))
+                .then();
+        } else {
+            console.log("set des is fucked", peer_connection.localDescription, peer_connection.remoteDescription);
+        }
+    }
+
+    function goSetIceCandidate(candidate) {
+        // !candidate || console.log(candidate.type);
+        !candidate || peer_connection.addIceCandidate(candidate).catch((error) => console.log(error));
+    }
+
+    function sendSocket(type, data) {
+        if (socket.readyState === 1) {
+            socket.send(JSON.stringify({"type": type, "data": data}));
+        } else {
+            console.log("socket is fucked");
+        }
+    }
+
+    // -------------------------------------
+
+    function sendPerFrameByFullScreenImg(img_data) {
+        socket.send(img_data);//这里用截图的模式接收端的会有很严重的毛边，看来还是要转换成矢量格式 比如说SVG之类的比较好
+    }
+
+    function sendPerFrameByPointCurve(beginPoint, controlPoint, endPoint) {
+        sendSocket("draw-canvas", {beginPoint, controlPoint, endPoint});
+    }
+
+    function drawPerFrameByPointCurve(receivePoints) {
+        // console.log(receivePoints);
+        drawLine(receivePoints.beginPoint, receivePoints.controlPoint, receivePoints.endPoint, false);
+    }
+
+    // --------------------------
+
+    function resizeCanvas() {
+        const canvasContainer = document.querySelector('#canvas-container');
+        canvas.setAttribute("width", canvasContainer.clientWidth.toString());
+        canvas.setAttribute("height", canvasContainer.clientHeight.toString());
+    }
+
+    function down(evt) {
+        // console.log(evt);
+        isMouseDown = true;
+        const {x, y} = getPos(evt);
+        canvasPoints.push({x, y});
+        canvasBeginPoint = {x, y};
+    }
+
+    function move(evt) {
+        if (!isMouseDown) return;
+
+        const {x, y} = getPos(evt);
+        canvasPoints.push({x, y});
+
+        if (canvasPoints.length > 0) {// old value is 3
+            const lastTwoPoints = canvasPoints.slice(-2);
+            const controlPoint = lastTwoPoints[0];
+            const endPoint = {
+                x: (lastTwoPoints[0].x + lastTwoPoints[1].x) / 2,
+                y: (lastTwoPoints[0].y + lastTwoPoints[1].y) / 2,
+            }
+            drawLine(canvasBeginPoint, controlPoint, endPoint);
+            canvasBeginPoint = endPoint;
+        }
+    }
+
+    function up(evt) {
+        if (!isMouseDown) return;
+        const {x, y} = getPos(evt);
+        canvasPoints.push({x, y});
+
+        if (canvasPoints.length > 0) { // old value is 3
+            const lastTwoPoints = canvasPoints.slice(-2);
+            const controlPoint = lastTwoPoints[0];
+            const endPoint = lastTwoPoints[1];
+            drawLine(canvasBeginPoint, controlPoint, endPoint);
+        }
+        canvasBeginPoint = null;
+        isMouseDown = false;
+        canvasPoints = [];
+    }
+
+    function getPos(evt) {
+        // console.log(evt);
+        return {
+            x: evt.offsetX,
+            y: evt.offsetY
+        }
+        // return {
+        //     x: evt.clientX,
+        //     y: evt.clientY
+        // }
+    }
+
+    function drawLine(beginPoint, controlPoint, endPoint, isNeedSend = true) {
+        ctx.beginPath();
+        ctx.moveTo(beginPoint.x, beginPoint.y);
+        ctx.quadraticCurveTo(controlPoint.x, controlPoint.y, endPoint.x, endPoint.y);
+        ctx.stroke();
+        ctx.closePath();
+        // console.log(counter++);
+        // sendPerFrameByFullScreenImg(canvas.toDataURL());
+        if (isNeedSend === true) {
+            sendPerFrameByPointCurve(beginPoint, controlPoint, endPoint);
+        }
+    }
+
+
+</script>
+
+
+</body>
+</html>
