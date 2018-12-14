@@ -15,9 +15,14 @@ class TcpRoom
         return self::$list;
     }
 
-    public static function setList($list)
+    public static function setList($fd)
     {
-        self::$list = $list;
+        self::$list[$fd] = $fd;
+    }
+
+    public static function removeList($fd)
+    {
+        unset(self::$list[$fd]);
     }
 
 }

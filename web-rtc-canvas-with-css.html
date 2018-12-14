@@ -33,16 +33,9 @@
                 <div class="card-header list-group-item-info text-center">
                     你大爷的列表
                 </div>
-                <ul class="list-group list-group-flush" style="height: 500px;overflow-y:auto;">
-                    <button class="list-group-item d-flex justify-content-between align-items-center list-group-item-action">
-                        大壮
-                        <a href="javascript:void(0);" class="btn btn-outline-danger">连接</a>
-                    </button>
-                    <button class="list-group-item d-flex justify-content-between align-items-center list-group-item-action">
-                        小毛
-                        <a href="javascript:void(0);" class="btn btn-outline-danger">连接</a>
-                    </button>
-                    <button class="list-group-item d-flex justify-content-between align-items-center list-group-item-action">
+                <ul class="friend-list list-group list-group-flush" style="height: 500px;overflow-y:auto;">
+                    <button class="list-group-item d-flex justify-content-between align-items-center list-group-item-action"
+                            style="display: none!important;">
                         二宝
                         <a href="javascript:void(0);" class="btn btn-outline-danger">连接</a>
                     </button>
@@ -59,6 +52,7 @@
 您的SID是：
 <span id="sid">sid</span>
 <script src="js/adapter.js"></script>
+<script src="js/jquery.min.js"></script>
 <script>
     const configuration = {
         "iceServers": [
@@ -104,6 +98,9 @@
         // console.log(event.data);
         let receiveData = JSON.parse(event.data);
         switch (receiveData.type) {
+            case "get-friend-list":
+                goSetFriendList(receiveData.data);
+                break;
             case "set-sid":
                 goSetSid(receiveData.data);
                 break;
@@ -173,6 +170,24 @@
         sid_div.innerText = sid;
     }
 
+    function goSetFriendList(receiveData) {
+        $(".friend-list button:visible").remove();
+        for (let key in receiveData) {
+            let $friendList = $(".friend-list button:hidden").clone(true, true);
+            let $shit = $friendList.children("a");
+            $shit[0].onclick = function () {
+                console.log("send" + receiveData[key]);
+            }
+            console.log($shit);
+            $friendList.html(receiveData[key]);
+            $friendList.append($shit);
+            $friendList.css("display", "");
+
+            $(".friend-list button:hidden").before($friendList)
+            console.log($(".friend-list").html())
+        }
+    }
+
     function goSetDescription(receiveData) {
 
         if (receiveData.type === "offer") {
@@ -229,6 +244,7 @@
     }
 
     function down(evt) {
+        evt.preventDefault();
         // console.log(evt);
         isMouseDown = true;
         const {x, y} = getPos(evt);
@@ -238,6 +254,7 @@
 
     function move(evt) {
         if (!isMouseDown) return;
+        evt.preventDefault();
 
         const {x, y} = getPos(evt);
         canvasPoints.push({x, y});
@@ -255,6 +272,7 @@
     }
 
     function up(evt) {
+        evt.preventDefault();
         if (!isMouseDown) return;
         const {x, y} = getPos(evt);
         canvasPoints.push({x, y});

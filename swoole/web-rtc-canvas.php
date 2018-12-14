@@ -19,6 +19,16 @@ $ws->on('open', function ($ws, $request) {
         "data" => $request->fd
     ));
     $ws->push($request->fd, $sid_json);
+    TcpRoom::setList($request->fd);
+    $friend_list_json = json_encode(array(
+        "type" => "get-friend-list",
+        "data" => TcpRoom::getList()
+    ));
+    foreach ($ws->connections as $fd) {
+        if ($fd != $request->fd) {
+            $ws->push($fd, $friend_list_json);
+        }
+    }
     echo "now online fucker numbers is : " . count($ws->connections);
 });
 
@@ -39,7 +49,15 @@ $ws->on('message', function ($ws, $frame) {
 
 //监听WebSocket连接关闭事件
 $ws->on('close', function ($ws, $fd) {
-    echo "client->{$fd} is closed\n";
+    TcpRoom::removeList($fd);
+    $friend_list_json = json_encode(array(
+        "type" => "get-friend-list",
+        "data" => TcpRoom::getList()
+    ));
+    foreach ($ws->connections as $fd) {
+        $ws->push($fd, $friend_list_json);
+    }
+    echo "client->{$fd} is closed\n\r";
 });
 
 
