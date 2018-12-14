@@ -8,7 +8,7 @@
 
 class TcpRoom
 {
-    static $list = array();
+    public static $list = array(1,2,3,4,5);
 
     public static function getList()
     {
@@ -17,12 +17,12 @@ class TcpRoom
 
     public static function setList($fd)
     {
-        self::$list[$fd] = $fd;
+        self::$list["sid-" . $fd] = $fd;
     }
 
     public static function removeList($fd)
     {
-        unset(self::$list[$fd]);
+        unset(self::$list["sid-" . $fd]);
     }
 
 }
