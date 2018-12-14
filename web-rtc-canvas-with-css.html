@@ -15,6 +15,8 @@
                          class="d-inline-block align-top">
                     Bootstrap
                 </a>
+                <span class="navbar-text">您的SID是：
+                    <span id="sid">sid</span></span>
             </nav>
         </div>
     </div>
@@ -49,8 +51,7 @@
 <audio width="400" height="300" controls></audio>
 <button id="send-text">Send DataChannel</button>
 <button id="send-stream">Send StreamChannel</button>
-您的SID是：
-<span id="sid">sid</span>
+
 <script src="js/adapter.js"></script>
 <script src="js/jquery.min.js"></script>
 <script>
@@ -104,17 +105,20 @@
             case "set-sid":
                 goSetSid(receiveData.data);
                 break;
-            case "draw-canvas":
+            case "draw-canvas"://single
                 drawPerFrameByPointCurve(receiveData.data);
                 break;
-            case "description":
+            case "description"://single
                 goSetDescription(receiveData.data);
                 break;
-            case "ice-candidate":
+            case "ice-candidate"://single
                 goSetIceCandidate(receiveData.data);
                 break;
+            case "rtc-pair-success"://接收RTC请求成功 开始SDP配对
+                goRequestRTC();
+                break;
             default:
-                console.log("receive socket is fucked")
+                console.log("receive socket is fucked", receiveData)
         }
     }
 
@@ -303,6 +307,7 @@
             let $friendList = $(".friend-list button:hidden").clone(true, true);
             let $shit = $friendList.children("a");
             $shit[0].onclick = function () {
+                $(this).addClass("disabled");
                 goSendRTCRequest(receiveData[key]['sid']);
                 console.log("send" + receiveData[key]['sid']);
             }

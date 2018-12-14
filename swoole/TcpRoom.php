@@ -27,8 +27,12 @@ class TcpRoom
 
     public static function setPartner($fd, $partner)
     {
-        if (isset(self::$list["sid-" . $fd])) {
+        if (isset(self::$list["sid-" . $fd]) && isset(self::$list["sid-" . $partner])) {
             self::$list["sid-" . $fd]['partner'] = $partner;
+            self::$list["sid-" . $partner]['partner'] = $fd;
+            return true;
+        } else {
+            return false;
         }
     }
 

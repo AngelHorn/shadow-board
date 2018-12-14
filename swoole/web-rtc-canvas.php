@@ -44,15 +44,24 @@ $ws->on('open', function ($ws, $request) {
 
 //监听WebSocket消息事件
 $ws->on('message', function ($ws, $frame) {
-//    echo "Message: {$frame->data}\n";
-//    echo strlen($frame->data) . "\n";
-//    var_dump($frame);
-//    var_dump($ws);
-//    $client_data = json_decode($frame->data);
-
-    foreach ($ws->connections as $fd) {
-        if ($fd != $frame->fd) {
-            $ws->push($fd, $frame->data);
+    $data = json_decode($frame->data);
+    var_dump($data);
+    if ($data->type == "rtc-request") {
+        $setting_partner = TcpRoom::setPartner($frame->fd, $data->data);
+        if ($setting_partner) {
+            //设置配对成功 返回客户端结果
+            $ws->push($frame->fd, json_encode(array("type" => "rtc-pair-success")));
+        } else {
+            $ws->push($frame->fd, json_encode(array("type" => "error")));
+        }
+    } elseif ($data->type == "description" || $data->type == "ice-candidate" || $data->type == "draw-canvas") {
+        $ws->push(TcpRoom::$list['sid-' . $frame->fd]['partner'], $frame->data);
+    } else {
+        //广播给除了自己的所有人
+        foreach ($ws->connections as $fd) {
+            if ($fd != $frame->fd) {
+                $ws->push($fd, $frame->data);
+            }
         }
     }
 });
