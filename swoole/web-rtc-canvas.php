@@ -1,5 +1,6 @@
 <?php
 require 'TcpRoom.php';
+require 'Session.php';
 //创建websocket服务器对象，监听0.0.0.0:9502端口
 $ws = new swoole_websocket_server("0.0.0.0", 9502, SWOOLE_PROCESS, SWOOLE_SOCK_TCP | SWOOLE_SSL);
 $ws->set([
@@ -15,17 +16,28 @@ $ws->set([
 //监听WebSocket连接打开事件
 $ws->on('open', function ($ws, $request) {
 //    print_r($request);
+    //setting
+    TcpRoom::setList($request->fd);
+
+
+    //发送个人信息
     $sid_json = json_encode(array(
         "type" => "set-sid",
         "data" => $request->fd
     ));
     $ws->push($request->fd, $sid_json);
-    (new TcpRoom())->setList($request->fd);
+
+    //发送好友列表
     $friend_list_json = json_encode(array(
         "type" => "get-friend-list",
         "data" => TcpRoom::getList()
     ));
-    $ws->push($request->fd, $friend_list_json);
+    foreach ($ws->connections as $wsfd) {
+        $ws->push($wsfd, $friend_list_json);
+    }
+
+
+    //DEBUG
     var_export(TcpRoom::getList());
     echo "now online fucker numbers is : " . count($ws->connections);
 });
@@ -47,7 +59,9 @@ $ws->on('message', function ($ws, $frame) {
 
 //监听WebSocket连接关闭事件
 $ws->on('close', function ($ws, $fd) {
-    (new TcpRoom())->removeList($fd);
+
+    //发送好友列表给别人
+    TcpRoom::removeList($fd);
     $friend_list_json = json_encode(array(
         "type" => "get-friend-list",
         "data" => TcpRoom::getList()
@@ -57,6 +71,8 @@ $ws->on('close', function ($ws, $fd) {
             $ws->push($wsfd, $friend_list_json);
         }
     }
+
+    //DEBUG
     echo "client->{$fd} is closed\n\r";
 });
 

@@ -170,22 +170,6 @@
         sid_div.innerText = sid;
     }
 
-    function goSetFriendList(receiveData) {
-        console.log(receiveData)
-        $(".friend-list button:visible").remove();
-        for (let key in receiveData) {
-            let $friendList = $(".friend-list button:hidden").clone(true, true);
-            let $shit = $friendList.children("a");
-            $shit[0].onclick = function () {
-                console.log("send" + receiveData[key]);
-            }
-            $friendList.html(receiveData[key]);
-            $friendList.append($shit);
-            $friendList.css("display", "");
-            $(".friend-list button:hidden").before($friendList)
-        }
-    }
-
     function goSetDescription(receiveData) {
 
         if (receiveData.type === "offer") {
@@ -311,7 +295,27 @@
         }
     }
 
+    // ---------------------------------------
+    function goSetFriendList(receiveData) {
+        console.log(receiveData)
+        $(".friend-list button:visible").remove();
+        for (let key in receiveData) {
+            let $friendList = $(".friend-list button:hidden").clone(true, true);
+            let $shit = $friendList.children("a");
+            $shit[0].onclick = function () {
+                goSendRTCRequest(receiveData[key]['sid']);
+                console.log("send" + receiveData[key]['sid']);
+            }
+            $friendList.html(receiveData[key]['sid']);
+            $friendList.append($shit);
+            $friendList.css("display", "");
+            $(".friend-list button:hidden").before($friendList)
+        }
+    }
 
+    function goSendRTCRequest(sid) {
+        sendSocket("rtc-request", sid);
+    }
 </script>
 
 
