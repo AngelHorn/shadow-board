@@ -86,6 +86,10 @@
             stream.getTracks().forEach(track => peer_connection.addTrack(track, stream));
         });
     };
+    socket.onerror = function (e) {
+        console.log(e);
+        alert("Socket服务器都没开你连毛线啊 哈哈哈哈");
+    }
 
     socket.onmessage = function (event) {
         // console.log(event.data);
