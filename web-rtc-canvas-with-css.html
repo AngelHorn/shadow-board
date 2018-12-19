@@ -6,27 +6,30 @@
     <link rel="stylesheet" href="assets/bootstrap.min.css">
 </head>
 <body>
-<div class="container-fluid">
-    <div class="row">
-        <div class="col">
-            <nav class="navbar navbar-dark bg-dark">
-                <a class="navbar-brand" href="#">
-                    <img src="//v4.bootcss.com/assets/brand/bootstrap-solid.svg" width="30" height="30"
-                         class="d-inline-block align-top">
-                    Bootstrap
-                </a>
-                <span class="navbar-text">您的SID是：
+<nav class="navbar navbar-dark bg-dark">
+    <a class="navbar-brand" href="#">
+        <img src="//v4.bootcss.com/assets/brand/bootstrap-solid.svg" width="30" height="30"
+             class="d-inline-block align-top">
+        Bootstrap
+    </a>
+    <audio controls></audio>
+
+    <form class="form-inline">
+        <button id="send-text" class="btn btn-outline-warning" type="button">发送自己的Sid给对方</button>
+    </form>
+    <span class="navbar-text">您的SID是：
                     <span id="sid">sid</span></span>
-            </nav>
-        </div>
-    </div>
+</nav>
+
+</nav>
+<div class="container-fluid">
     <hr>
     <div class="row">
         <div class="col-10">
             <div class="card border-info">
                 <div class="card-header text-center list-group-item-info">邪恶的画板</div>
                 <div class="card-body-fuck text-info-fuck" id="canvas-container">
-                    <canvas id="canvas" width="1600" height="900" style="border: 0px solid #000000;"></canvas>
+                    <canvas id="canvas" width="1600" height="800" style="border: 0px solid #000000;"></canvas>
                 </div>
             </div>
         </div>
@@ -46,12 +49,6 @@
         </div>
     </div>
 </div>
-
-
-<audio width="400" height="300" controls></audio>
-<button id="send-text">Send DataChannel</button>
-<button id="send-stream">Send StreamChannel</button>
-
 <script src="js/adapter.js"></script>
 <script src="js/jquery.min.js"></script>
 <script>
@@ -85,11 +82,6 @@
     let sid = null;
 
     socket.onopen = function (e) {
-        const send_stream_button = document.getElementById("send-stream");
-        send_stream_button.addEventListener("click", () => {
-            send_stream_button.disabled = true;
-            goRequestRTC();
-        });
         navigator.mediaDevices.getUserMedia({audio: true}).then(function (stream) {
             stream.getTracks().forEach(track => peer_connection.addTrack(track, stream));
         });
@@ -136,6 +128,7 @@
         console.log("peer_connection.ondatachannel");
         const receiveChannel = event.channel;
         receiveChannel.onmessage = function (msg) {
+            alert(msg);
             console.log("receiveChannel.onmessage", msg);
         };
     };
@@ -148,11 +141,16 @@
 
     peer_send_channel.onopen = function () {
         console.log("sendChannel.onopen");
+        goDisableFriendList();
         const button_ele = document.getElementById("send-text");
         button_ele.addEventListener("click", () => {
             console.log(peer_send_channel);
-            peer_send_channel.send("i am data");
+            peer_send_channel.send("收到Sid为 " + sid + " 的客户端的信息");
         });
+    };
+    peer_send_channel.onerror = function (event) {
+        console.log(event);
+        alert(event.message);
     };
     peer_send_channel.onclose = () => console.log("shit2");
 
@@ -213,6 +211,8 @@
     }
 
     function sendPerFrameByPointCurve(beginPoint, controlPoint, endPoint) {
+        //canvas的数据可不是一定要用web socket来传输的 其实webRTC自带的dataChannel也能解决这个问题 只是服务器不知道了 但是
+        //服务器知道或者不知道 重要吗？ 不重要吗？ 重要吗？ 不重要吗？
         sendSocket("draw-canvas", {beginPoint, controlPoint, endPoint});
     }
 
@@ -306,16 +306,30 @@
         for (let key in receiveData) {
             let $friendList = $(".friend-list button:hidden").clone(true, true);
             let $shit = $friendList.children("a");
+            if (sid == receiveData[key]['sid']) {
+                $($shit[0]).addClass("disabled").text("这是你自己");
+            }
             $shit[0].onclick = function () {
-                $(this).addClass("disabled");
+                goDisableFriendList();
+                $(this).addClass("disabled")
+                    .removeClass("btn-outline-danger")
+                    .addClass("btn-outline-success")
+                    .text("已连接到此用户");
                 goSendRTCRequest(receiveData[key]['sid']);
                 console.log("send" + receiveData[key]['sid']);
             }
             $friendList.html(receiveData[key]['sid']);
             $friendList.append($shit);
             $friendList.css("display", "");
-            $(".friend-list button:hidden").before($friendList)
+            $(".friend-list button:hidden").before($friendList);
         }
+    }
+
+    function goDisableFriendList() {
+        $(".friend-list button:visible a")
+            .addClass("disabled")
+            .removeClass("btn-outline-danger")
+            .addClass("btn-outline-success");
     }
 
     function goSendRTCRequest(sid) {
